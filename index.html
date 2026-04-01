@@ -49,7 +49,7 @@
 
 <div class="header">
     <div style="font-size: 1.2rem; font-weight: bold;">Booking.dom <span style="color:var(--gold)">Premium</span></div>
-    <div id="member-tag">Member ID: #67709546</div> <!-- 6777777 lmao -->
+    <div id="member-tag">Member ID: #67709546</div>
 </div>
 
 <div class="container">
@@ -157,7 +157,8 @@
 
 <script>
     let selectedPackage = { name: '', price: 0 };
-    const banks = ["Axetap Express", "Shacklebolt Finances", "Delunt Membership", "CrossTap Master", "Infrance Digital];
+    // FIXED: Added missing closing quote below
+    const banks = ["Axetap Express", "Shacklebolt Finances", "Delunt Membership", "CrossTap Master", "Infrance Digital"];
 
     function selectSuite(el, name, price) {
         document.querySelectorAll('.package-card').forEach(c => c.classList.remove('selected'));
@@ -178,10 +179,10 @@
         }
         input.value = formatted;
 
-        // Set Bank Bar
         const bar = document.getElementById('bank-service');
         if(val.length > 0) {
-            const bankIndex = val.length % 2;
+            // FIXED: Changed % 2 to % banks.length so it uses all banks
+            const bankIndex = val.length % banks.length;
             bar.innerText = "ROUTING VIA: " + banks[bankIndex];
             bar.style.color = "var(--accent)";
         } else {
@@ -203,16 +204,20 @@
     }
 
     function updateTotal() {
-        const start = new Date(document.getElementById('checkin').value);
-        const end = new Date(document.getElementById('checkout').value);
+        const startInput = document.getElementById('checkin').value;
+        const endInput = document.getElementById('checkout').value;
         const display = document.getElementById('final-total');
         
-        if (start && end && end > start) {
-            const nights = (end - start) / (1000 * 60 * 60 * 24);
-            display.innerText = "$" + (nights * selectedPackage.price).toLocaleString();
-        } else {
-            display.innerText = "$0.00";
+        if (startInput && endInput) {
+            const start = new Date(startInput);
+            const end = new Date(endInput);
+            if (end > start) {
+                const nights = (end - start) / (1000 * 60 * 60 * 24);
+                display.innerText = "$" + (nights * selectedPackage.price).toLocaleString();
+                return;
+            }
         }
+        display.innerText = "$0.00";
     }
 
     function processPayment() {
@@ -256,8 +261,8 @@
         document.getElementById('res-details').innerHTML = `
             <p><strong>Room Type:</strong> ${selectedPackage.name}</p>
             <p><strong>Room Number:</strong> Suite ${Math.floor(Math.random() * 800) + 101}</p>
-            <p><strong>Check-in:</strong> ${document.getElementById('checkin').value}</p>
-            <p><strong>Check-out:</strong> ${document.getElementById('checkout').value}</p>
+            <p><strong>Check-in:</strong> ${document.getElementById('checkin').value || 'N/A'}</p>
+            <p><strong>Check-out:</strong> ${document.getElementById('checkout').value || 'N/A'}</p>
             <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
             <p><strong>Personal Attendant:</strong> ${attendant}</p>
         `;
