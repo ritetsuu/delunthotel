@@ -5,73 +5,127 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Booking.dom | Premium Portal</title>
     <style>
-        :root { --accent: #003580; --gold: #feba02; --dark: #00224f; --text: #333; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; color: var(--text); }
-        .header { background: var(--accent); color: white; padding: 1rem 10%; display: flex; justify-content: space-between; align-items: center; }
-        .main-card { max-width: 600px; margin: 2rem auto; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; }
-        .content { padding: 2rem; }
-        .hotel-brand { font-size: 1.5rem; font-weight: bold; color: var(--dark); border-bottom: 2px solid var(--gold); display: inline-block; margin-bottom: 1rem; }
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        label { display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 5px; color: #555; }
-        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        .price-box { background: #f9f9f9; border-left: 4px solid var(--accent); padding: 1rem; margin: 1.5rem 0; }
-        .btn-pay { width: 100%; padding: 15px; background: var(--accent); color: white; border: none; border-radius: 4px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .btn-pay:hover { background: var(--dark); }
+        :root { --accent: #003580; --gold: #feba02; --dark: #00224f; --text: #333; --light-bg: #f0f2f5; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--light-bg); margin: 0; color: var(--text); }
         
-        /* Overlay Logic */
-        #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); z-index: 100; flex-direction: column; justify-content: center; align-items: center; }
+        .header { background: var(--accent); color: white; padding: 1rem 10%; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .container { max-width: 900px; margin: 2rem auto; padding: 0 20px; }
+        
+        /* Step 1: Package Selection */
+        .package-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 2rem; }
+        .package-card { background: white; border: 2px solid transparent; border-radius: 12px; padding: 1.5rem; text-align: center; transition: 0.3s; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .package-card:hover { transform: translateY(-5px); border-color: var(--gold); }
+        .package-card.selected { border-color: var(--accent); background: #f0f7ff; }
+        .package-card h3 { margin: 0; color: var(--dark); }
+        .price { font-size: 1.5rem; font-weight: bold; color: var(--accent); margin: 10px 0; }
+
+        /* Step 2: Form Styles */
+        .main-card { background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden; display: none; }
+        .content { padding: 2rem; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+        label { display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 5px; color: #555; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        
+        /* Step 3: Dashboard */
+        #dashboard { display: none; background: white; border-radius: 12px; padding: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .dash-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 1rem; margin-bottom: 2rem; }
+        .res-box { background: #f8fbff; border: 1px solid #d0e3ff; border-radius: 8px; padding: 1.5rem; line-height: 1.8; }
+
+        /* General UI */
+        .btn-pay { width: 100%; padding: 15px; background: var(--accent); color: white; border: none; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-pay:disabled { background: #ccc; }
+        
+        #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 100; flex-direction: column; justify-content: center; align-items: center; }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--accent); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        #receipt { display: none; background: #e7f3ff; padding: 1.5rem; border: 1px solid var(--accent); border-radius: 8px; margin-top: 1rem; }
     </style>
 </head>
 <body>
 
 <div class="header">
     <div style="font-size: 1.2rem; font-weight: bold;">Booking.dom <span style="color:var(--gold)">Premium</span></div>
-    <div>Member ID: #778291</div>
+    <div id="member-tag">Member ID: #778291</div>
 </div>
 
-<div class="main-card">
-    <div class="content">
-        <div class="hotel-brand">Delunt Hotel & Resorts</div>
-        
-        <label>Select Your Tier</label>
-        <select id="suite" onchange="calc()">
-            <option value="10000">Presidential Wing ($10,000 / night)</option>
-            <option value="5000">Luxury Executive ($5,000 / night)</option>
-            <option value="1000">Standard Deluxe ($1,000 / night)</option>
-        </select>
-
-        <div class="form-grid" style="margin-top: 15px;">
-            <div>
-                <label>Arrival</label>
-                <input type="date" id="checkin" onchange="calc()">
+<div class="container">
+    <div id="selection-phase">
+        <h2 style="text-align: center; color: var(--dark);">Select Your Experience</h2>
+        <div class="package-grid">
+            <div class="package-card" onclick="selectSuite(this, 'Presidential Wing', 10000)">
+                <h3>Presidential Wing</h3>
+                <div class="price">$10,000 / night</div>
+                <p style="font-size: 0.8rem;">Private butler & rooftop pool</p>
             </div>
-            <div>
-                <label>Departure</label>
-                <input type="date" id="checkout" onchange="calc()">
+            <div class="package-card" onclick="selectSuite(this, 'Luxury Executive', 5000)">
+                <h3>Luxury Executive</h3>
+                <div class="price">$5,000 / night</div>
+                <p style="font-size: 0.8rem;">Ocean view & spa access</p>
+            </div>
+            <div class="package-card" onclick="selectSuite(this, 'Standard Deluxe', 1000)">
+                <h3>Standard Deluxe</h3>
+                <div class="price">$1,000 / night</div>
+                <p style="font-size: 0.8rem;">Comfort & elegance redefined</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="checkout-phase" class="main-card">
+        <div class="content">
+            <div style="margin-bottom: 20px;">
+                <button onclick="location.reload()" style="background:none; border:none; color:var(--accent); cursor:pointer; font-weight:bold;"><- Back</button>
+            </div>
+            <h2 id="selected-title" style="margin-top:0"></h2>
+            
+            <div class="form-grid">
+                <div>
+                    <label>Title</label>
+                    <select id="title-name">
+                        <option>Mr.</option><option>Ms.</option><option>Mdm.</option><option>Dr.</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Pronouns</label>
+                    <input type="text" id="pronouns" placeholder="e.g. He/Him">
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <input type="text" id="first-name" placeholder="First Name">
+                <input type="text" id="last-name" placeholder="Last Name">
+            </div>
+
+            <div class="form-grid">
+                <div>
+                    <label>Check-in</label>
+                    <input type="date" id="checkin">
+                </div>
+                <div>
+                    <label>Check-out</label>
+                    <input type="date" id="checkout">
+                </div>
+            </div>
+
+            <div style="background:#f9f9f9; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                <label>Premium Card Number</label>
+                <input type="text" placeholder="XXXX XXXX XXXX XXXX">
+            </div>
+
+            <button class="btn-pay" onclick="processPayment()">AUTHORIZE & RESERVE</button>
+        </div>
+    </div>
+
+    <div id="dashboard">
+        <div class="dash-header">
+            <h2 id="welcome-msg"></h2>
+            <div style="text-align: right;">
+                <span style="font-size: 0.8rem; color: #777;">MEMBER STATUS</span><br>
+                <strong id="user-id"></strong>
             </div>
         </div>
 
-        <div class="price-box">
-            <span style="font-size: 0.9rem;">Estimated Total:</span><br>
-            <strong id="total" style="font-size: 1.4rem;">$0.00</strong>
-        </div>
-
-        <label>Premium Card Number</label>
-        <input type="text" id="card" maxlength="15" placeholder="XXXX XXXX XXXX XXX" oninput="detectBank()">
-        <div id="bank-tag" style="font-size: 0.75rem; color: var(--accent); margin-bottom: 10px; height: 15px;"></div>
-
-        <div class="form-grid">
-            <input type="text" placeholder="Cardholder Name">
-            <input type="password" maxlength="4" placeholder="Security PIN">
-        </div>
-
-        <button class="btn-pay" onclick="process()">RESERVE NOW</button>
-
-        <div id="receipt"></div>
+        <h3>Upcoming Reservations</h3>
+        <div class="res-box" id="res-details">
+            </div>
     </div>
 </div>
 
@@ -81,49 +135,67 @@
 </div>
 
 <script>
-    const banks = ["Axetap Express", "Shacklebolt Banking", "Vance Card Platinum", "Global Reserve", "Titanium Trust"];
-    
-    function calc() {
-        const rate = document.getElementById('suite').value;
-        const start = new Date(document.getElementById('checkin').value);
-        const end = new Date(document.getElementById('checkout').value);
-        if (start && end && end > start) {
-            const nights = (end - start) / (1000 * 60 * 60 * 24);
-            document.getElementById('total').innerText = "$" + (nights * rate).toLocaleString();
-        }
+    let selectedPackage = { name: '', price: 0 };
+
+    function selectSuite(el, name, price) {
+        // Visual feedback
+        document.querySelectorAll('.package-card').forEach(c => c.classList.remove('selected'));
+        el.classList.add('selected');
+        
+        selectedPackage = { name, price };
+        
+        // Switch view
+        document.getElementById('selection-phase').style.display = 'none';
+        document.getElementById('checkout-phase').style.display = 'block';
+        document.getElementById('selected-title').innerText = "Booking: " + name;
     }
 
-    function detectBank() {
-        const val = document.getElementById('card').value;
-        const tag = document.getElementById('bank-tag');
-        if(val.length >= 4) {
-            tag.innerText = "Verified: " + banks[val.charCodeAt(0) % banks.length];
-        } else { tag.innerText = ""; }
-    }
+    function processPayment() {
+        const first = document.getElementById('first-name').value;
+        const last = document.getElementById('last-name').value;
+        const title = document.getElementById('title-name').value;
+        
+        if(!first || !last) { alert("Please enter your name"); return; }
 
-    function process() {
         const overlay = document.getElementById('overlay');
         const msg = document.getElementById('proc-msg');
-        const receipt = document.getElementById('receipt');
         
         overlay.style.display = 'flex';
-        msg.innerText = "Payment is being processed...";
+        msg.innerText = "Payment is being authorized...";
 
         setTimeout(() => {
-            msg.innerText = "Payment is authorized. Generating your room details...";
+            msg.innerText = "Finalizing your premium dashboard...";
             setTimeout(() => {
                 overlay.style.display = 'none';
-                const roomNum = Math.floor(Math.random() * 900) + 100;
-                const floorNum = Math.floor(roomNum / 100);
-                receipt.style.display = 'block';
-                receipt.innerHTML = `
-                    <h3 style="margin-top:0">Booking Confirmed!</h3>
-                    <p><strong>Room:</strong> Suite ${roomNum} (Floor ${floorNum})</p>
-                    <p><strong>Access Code:</strong> ${Math.floor(Math.random()*9000)+1000}</p>
-                    <p style="font-size:0.8rem">Welcome to the Delunt lifestyle.</p>
-                `;
+                showDashboard(title, first, last);
             }, 2000);
         }, 2000);
+    }
+
+    function showDashboard(title, first, last) {
+        document.getElementById('checkout-phase').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        
+        // Random IDs and Data
+        const randomID = "UID-" + Math.floor(Math.random() * 900000 + 100000);
+        const roomNum = Math.floor(Math.random() * 800) + 101;
+        
+        const firstNames = ["James", "Sera", "Julian", "Elara", "Marcus", "Alix"];
+        const lastNames = ["Vance", "Sterling", "Montague", "Blackwood", "Holloway"];
+        const attendant = firstNames[Math.floor(Math.random()*firstNames.length)] + " " + lastNames[Math.floor(Math.random()*lastNames.length)];
+
+        // Set Text
+        document.getElementById('welcome-msg').innerText = `Welcome, ${title} ${last}.`;
+        document.getElementById('user-id').innerText = "#" + randomID;
+        
+        document.getElementById('res-details').innerHTML = `
+            <p><strong>Room Type:</strong> ${selectedPackage.name}</p>
+            <p><strong>Room Number:</strong> Suite ${roomNum}</p>
+            <p><strong>Check-in Date:</strong> ${document.getElementById('checkin').value || 'TBD'}</p>
+            <p><strong>Check-out Date:</strong> ${document.getElementById('checkout').value || 'TBD'}</p>
+            <hr style="border: 0; border-top: 1px solid #eee;">
+            <p><strong>Personal Attendant:</strong> ${attendant}</p>
+        `;
     }
 </script>
 
