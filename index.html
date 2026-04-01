@@ -24,16 +24,21 @@
         .content { padding: 2rem; }
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
         label { display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 5px; color: #555; }
-        input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
         
+        /* Payment Specifics */
+        .bank-bar { background: #eee; padding: 8px 12px; border-radius: 4px; font-size: 0.75rem; color: #666; margin-bottom: 10px; border-left: 4px solid var(--gold); font-family: monospace; }
+        .pin-container { position: relative; display: flex; align-items: center; }
+        .show-pin { position: absolute; right: 10px; background: none; border: none; color: var(--accent); cursor: pointer; font-size: 0.75rem; font-weight: bold; }
+        .total-display { background: var(--dark); color: white; padding: 15px; border-radius: 8px; margin: 20px 0; display: flex; justify-content: space-between; align-items: center; }
+
         /* Step 3: Dashboard */
         #dashboard { display: none; background: white; border-radius: 12px; padding: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         .dash-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 1rem; margin-bottom: 2rem; }
         .res-box { background: #f8fbff; border: 1px solid #d0e3ff; border-radius: 8px; padding: 1.5rem; line-height: 1.8; }
 
-        /* General UI */
-        .btn-pay { width: 100%; padding: 15px; background: var(--accent); color: white; border: none; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .btn-pay:disabled { background: #ccc; }
+        .btn-pay { width: 100%; padding: 15px; background: var(--accent); color: white; border: none; border-radius: 6px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.2s; }
+        .btn-pay:hover { background: var(--dark); }
         
         #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 100; flex-direction: column; justify-content: center; align-items: center; }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--accent); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
@@ -44,7 +49,7 @@
 
 <div class="header">
     <div style="font-size: 1.2rem; font-weight: bold;">Booking.dom <span style="color:var(--gold)">Premium</span></div>
-    <div id="member-tag">Member ID: #778291</div>
+    <div id="member-tag">Member ID: #67709546</div> <!-- 6777777 lmao -->
 </div>
 
 <div class="container">
@@ -85,7 +90,7 @@
                 </div>
                 <div>
                     <label>Pronouns</label>
-                    <input type="text" id="pronouns" placeholder="e.g. He/Him">
+                    <input type="text" id="pronouns" placeholder="e.g. She/Her">
                 </div>
             </div>
 
@@ -97,17 +102,34 @@
             <div class="form-grid">
                 <div>
                     <label>Check-in</label>
-                    <input type="date" id="checkin">
+                    <input type="date" id="checkin" onchange="updateTotal()">
                 </div>
                 <div>
                     <label>Check-out</label>
-                    <input type="date" id="checkout">
+                    <input type="date" id="checkout" onchange="updateTotal()">
                 </div>
             </div>
 
-            <div style="background:#f9f9f9; padding: 15px; border-radius: 8px; margin: 15px 0;">
-                <label>Premium Card Number</label>
-                <input type="text" placeholder="XXXX XXXX XXXX XXXX">
+            <div style="background:#f9f9f9; padding: 20px; border-radius: 8px; margin: 15px 0; border: 1px solid #ddd;">
+                <div class="bank-bar" id="bank-service">SYSTEM IDLE: AWAITING CARD...</div>
+                
+                <label>Premium Card Number (12 Digits)</label>
+                <input type="text" id="card-num" maxlength="14" placeholder="0000-0000-0000" oninput="formatCard(this)">
+                
+                <div class="form-grid" style="margin-top:15px;">
+                    <div>
+                        <label>Security PIN</label>
+                        <div class="pin-container">
+                            <input type="password" id="pin" maxlength="4" placeholder="****">
+                            <button class="show-pin" onclick="togglePin()">SHOW</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="total-display">
+                <span>TOTAL DUE:</span>
+                <strong id="final-total">$0.00</strong>
             </div>
 
             <button class="btn-pay" onclick="processPayment()">AUTHORIZE & RESERVE</button>
@@ -124,8 +146,7 @@
         </div>
 
         <h3>Upcoming Reservations</h3>
-        <div class="res-box" id="res-details">
-            </div>
+        <div class="res-box" id="res-details"></div>
     </div>
 </div>
 
@@ -136,30 +157,76 @@
 
 <script>
     let selectedPackage = { name: '', price: 0 };
+    const banks = ["Axetap Express", "Shacklebolt Finances", "Delunt Membership", "CrossTap Master", "Infrance Digital];
 
     function selectSuite(el, name, price) {
-        // Visual feedback
         document.querySelectorAll('.package-card').forEach(c => c.classList.remove('selected'));
         el.classList.add('selected');
-        
         selectedPackage = { name, price };
-        
-        // Switch view
         document.getElementById('selection-phase').style.display = 'none';
         document.getElementById('checkout-phase').style.display = 'block';
-        document.getElementById('selected-title').innerText = "Booking: " + name;
+        document.getElementById('selected-title').innerText = name;
+        updateTotal();
+    }
+
+    function formatCard(input) {
+        let val = input.value.replace(/\D/g, '');
+        let formatted = '';
+        for (let i = 0; i < val.length; i++) {
+            if (i > 0 && i % 4 === 0) formatted += '-';
+            formatted += val[i];
+        }
+        input.value = formatted;
+
+        // Set Bank Bar
+        const bar = document.getElementById('bank-service');
+        if(val.length > 0) {
+            const bankIndex = val.length % 2;
+            bar.innerText = "ROUTING VIA: " + banks[bankIndex];
+            bar.style.color = "var(--accent)";
+        } else {
+            bar.innerText = "SYSTEM IDLE: AWAITING CARD...";
+            bar.style.color = "#666";
+        }
+    }
+
+    function togglePin() {
+        const pin = document.getElementById('pin');
+        const btn = document.querySelector('.show-pin');
+        if(pin.type === "password") {
+            pin.type = "text";
+            btn.innerText = "HIDE";
+        } else {
+            pin.type = "password";
+            btn.innerText = "SHOW";
+        }
+    }
+
+    function updateTotal() {
+        const start = new Date(document.getElementById('checkin').value);
+        const end = new Date(document.getElementById('checkout').value);
+        const display = document.getElementById('final-total');
+        
+        if (start && end && end > start) {
+            const nights = (end - start) / (1000 * 60 * 60 * 24);
+            display.innerText = "$" + (nights * selectedPackage.price).toLocaleString();
+        } else {
+            display.innerText = "$0.00";
+        }
     }
 
     function processPayment() {
         const first = document.getElementById('first-name').value;
         const last = document.getElementById('last-name').value;
-        const title = document.getElementById('title-name').value;
+        const card = document.getElementById('card-num').value;
         
-        if(!first || !last) { alert("Please enter your name"); return; }
+        if(!first || !last || card.length < 14) { 
+            alert("Please complete your details and 12-digit card number."); 
+            return; 
+        }
 
         const overlay = document.getElementById('overlay');
         const msg = document.getElementById('proc-msg');
-        
         overlay.style.display = 'flex';
         msg.innerText = "Payment is being authorized...";
 
@@ -167,7 +234,7 @@
             msg.innerText = "Finalizing your premium dashboard...";
             setTimeout(() => {
                 overlay.style.display = 'none';
-                showDashboard(title, first, last);
+                showDashboard(document.getElementById('title-name').value, first, last);
             }, 2000);
         }, 2000);
     }
@@ -176,24 +243,22 @@
         document.getElementById('checkout-phase').style.display = 'none';
         document.getElementById('dashboard').style.display = 'block';
         
-        // Random IDs and Data
         const randomID = "UID-" + Math.floor(Math.random() * 900000 + 100000);
-        const roomNum = Math.floor(Math.random() * 800) + 101;
         
-        const firstNames = ["James", "Sera", "Julian", "Elara", "Marcus", "Alix"];
-        const lastNames = ["Vance", "Sterling", "Montague", "Blackwood", "Holloway"];
+        const firstNames = ["Alistair", "Serafina", "Julian", "Evangeline", "Leopold", "Cassian", "Genevieve", "Thatcher", "Odette", "Maximilian"];
+        const lastNames = ["Frontiue", "Sterling", "Montague", "Blackwood", "Holloway", "Villiers", "St. James", "Rothschild", "Deveraux", "Windsor"];
+        
         const attendant = firstNames[Math.floor(Math.random()*firstNames.length)] + " " + lastNames[Math.floor(Math.random()*lastNames.length)];
 
-        // Set Text
         document.getElementById('welcome-msg').innerText = `Welcome, ${title} ${last}.`;
         document.getElementById('user-id').innerText = "#" + randomID;
         
         document.getElementById('res-details').innerHTML = `
             <p><strong>Room Type:</strong> ${selectedPackage.name}</p>
-            <p><strong>Room Number:</strong> Suite ${roomNum}</p>
-            <p><strong>Check-in Date:</strong> ${document.getElementById('checkin').value || 'TBD'}</p>
-            <p><strong>Check-out Date:</strong> ${document.getElementById('checkout').value || 'TBD'}</p>
-            <hr style="border: 0; border-top: 1px solid #eee;">
+            <p><strong>Room Number:</strong> Suite ${Math.floor(Math.random() * 800) + 101}</p>
+            <p><strong>Check-in:</strong> ${document.getElementById('checkin').value}</p>
+            <p><strong>Check-out:</strong> ${document.getElementById('checkout').value}</p>
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
             <p><strong>Personal Attendant:</strong> ${attendant}</p>
         `;
     }
