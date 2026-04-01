@@ -3,91 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grand Horizon | Luxury Bookings</title>
+    <title>Trip.gg | Luxury Stays</title>
     <style>
-        :root {
-            --gold: #d4af37;
-            --dark: #1a1a1a;
-            --white: #ffffff;
+        :root { --gold: #c5a059; --bg: #0f0f0f; --card-bg: #1a1a1a; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: white; display: flex; justify-content: center; padding: 40px; }
+        .container { background: var(--card-bg); padding: 30px; border-radius: 20px; width: 450px; border: 1px solid #333; }
+        h1 { color: var(--gold); text-align: center; font-size: 1.8rem; }
+        label { display: block; margin: 15px 0 5px; font-size: 0.8rem; color: #888; text-transform: uppercase; }
+        select, input {
+            width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #333;
+            background: #252525; color: white; box-sizing: border-box;
         }
-        body {
-            font-family: 'Georgia', serif;
-            background-color: var(--dark);
-            color: var(--white);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .booking-card {
-            background: #222;
-            padding: 2rem;
-            border-radius: 15px;
-            border: 1px solid var(--gold);
-            width: 350px;
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-        h2 { color: var(--gold); margin-bottom: 0.5rem; }
-        p { font-size: 0.9rem; margin-bottom: 2rem; opacity: 0.8; }
-        input {
-            width: 90%;
-            padding: 12px;
-            margin: 10px 0;
-            background: #333;
-            border: 1px solid #444;
-            color: white;
-            border-radius: 5px;
-        }
+        .row { display: flex; gap: 10px; }
+        .price-display { background: #252525; padding: 15px; border-radius: 8px; margin-top: 20px; text-align: center; border: 1px dashed var(--gold); }
+        #total-price { color: var(--gold); font-size: 1.5rem; font-weight: bold; }
+        #bank-name { font-style: italic; color: #5cb85c; font-size: 0.9rem; margin-top: 5px; min-height: 1.2rem; }
         button {
-            width: 100%;
-            padding: 12px;
-            background: var(--gold);
-            border: none;
-            color: black;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 1rem;
-            transition: 0.3s;
+            width: 100%; padding: 15px; background: var(--gold); border: none;
+            border-radius: 8px; color: black; font-weight: bold; margin-top: 20px; cursor: pointer;
         }
-        button:hover { background: #f1c40f; }
-        #status { margin-top: 1.5rem; font-weight: bold; }
+        button:hover { opacity: 0.9; }
     </style>
 </head>
 <body>
 
-<div class="booking-card">
-    <h2>Grand Horizon</h2>
-    <p>Penthouse Suite - $15,000 / Night</p>
+<div class="container">
+    <h1>Trip.gg <small style="font-size: 10px; vertical-align: middle;">PREMIUM</small></h1>
     
-    <input type="text" placeholder="Full Name" id="name">
-    <input type="text" placeholder="Check-in Date" onfocus="(this.type='date')">
-    <input type="text" placeholder="Black Card Number (Any keys work)" id="card">
-    
-    <button onclick="processPayment()">CONFIRM BOOKING</button>
-    
-    <div id="status"></div>
+    <label>Select Your Suite</label>
+    <select id="suite" onchange="calculateTotal()">
+        <option value="10000">Presidential Suite ($10,000/nt)</option>
+        <option value="5000">Luxury Suite ($5,000/nt)</option>
+        <option value="1000">Normal Suite ($1,000/nt)</option>
+    </select>
+
+    <div class="row">
+        <div style="flex:1">
+            <label>Check-in</label>
+            <input type="date" id="checkin" onchange="calculateTotal()">
+        </div>
+        <div style="flex:1">
+            <label>Check-out</label>
+            <input type="date" id="checkout" onchange="calculateTotal()">
+        </div>
+    </div>
+
+    <label>Card Number (Max 15)</label>
+    <input type="text" id="card" maxlength="15" placeholder="0000 0000 0000 000" oninput="detectBank()">
+    <div id="bank-name"></div>
+
+    <div class="row">
+        <div style="flex:2">
+            <label>Cardholder Name</label>
+            <input type="text" placeholder="e.g. Richie Rich">
+        </div>
+        <div style="flex:1">
+            <label>PIN</label>
+            <input type="password" maxlength="4" placeholder="****">
+        </div>
+    </div>
+
+    <div class="price-display">
+        <div>Total Amount Due:</div>
+        <div id="total-price">$0</div>
+    </div>
+
+    <button onclick="confirmBooking()">AUTHORIZE PAYMENT</button>
 </div>
 
 <script>
-    function processPayment() {
-        const status = document.getElementById('status');
-        const name = document.getElementById('name').value;
+    const banks = ["Axetap Express", "Shacklebolt Banking", "Vance Card", "Iron Bank", "Goldman Crest"];
+
+    function calculateTotal() {
+        const rate = document.getElementById('suite').value;
+        const checkin = new Date(document.getElementById('checkin').value);
+        const checkout = new Date(document.getElementById('checkout').value);
         
-        if(!name) {
-            status.innerText = "Please enter a name, Excellency.";
-            return;
+        if (checkin && checkout && checkout > checkin) {
+            const nights = (checkout - checkin) / (1000 * 60 * 60 * 24);
+            const total = nights * rate;
+            document.getElementById('total-price').innerText = "$" + total.toLocaleString();
+        } else {
+            document.getElementById('total-price').innerText = "$0";
         }
+    }
 
-        status.style.color = "var(--gold)";
-        status.innerText = "Verifying Funds...";
+    function detectBank() {
+        const cardVal = document.getElementById('card').value;
+        const bankDisplay = document.getElementById('bank-name');
+        
+        // Randomly assign a bank name once they type 4 digits
+        if (cardVal.length >= 4) {
+            const seed = cardVal.substring(0, 1); // Use first digit as a simple selector
+            const selectedBank = banks[seed % banks.length];
+            bankDisplay.innerText = "Network: " + selectedBank;
+        } else {
+            bankDisplay.innerText = "";
+        }
+    }
 
-        setTimeout(() => {
-            status.innerHTML = `✅ Payment Accepted!<br>Welcome back, ${name}.<br>The Penthouse is ready.`;
-        }, 2000);
+    function confirmBooking() {
+        alert("Transaction Successful. Your private jet is being fueled.");
     }
 </script>
 
 </body>
 </html>
+
